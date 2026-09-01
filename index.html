@@ -62,16 +62,21 @@
     let score = 0, balls = 3, gameActive = false;
     let particles = [];
 
-    // Flippers
-    let leftFlipper = { x: 180, y: 700, length: 90, angle: 0.35, targetAngle: 0.35, isLeft: true };
-    let rightFlipper = { x: 420, y: 700, length: 90, angle: Math.PI - 0.35, targetAngle: Math.PI - 0.35, isLeft: false };
+    // Wider arcade flippers
+    let leftFlipper = { x: 165, y: 700, length: 105, angle: 0.35, targetAngle: 0.35, isLeft: true };
+    let rightFlipper = { x: 435, y: 700, length: 105, angle: Math.PI - 0.35, targetAngle: Math.PI - 0.35, isLeft: false };
 
-    // Bumpers
+    // Bumpers & Wall Slingshots
     const bumpers = [
-      { x: 300, y: 220, r: 35, pts: 500, color: '#ff007f' },
-      { x: 200, y: 320, r: 30, pts: 250, color: '#00f5ff' },
-      { x: 400, y: 320, r: 30, pts: 250, color: '#00f5ff' },
-      { x: 300, y: 440, r: 25, pts: 400, color: '#05ffa1' }
+      { x: 300, y: 220, r: 36, pts: 500, color: '#ff007f' },
+      { x: 200, y: 320, r: 32, pts: 250, color: '#00f5ff' },
+      { x: 400, y: 320, r: 32, pts: 250, color: '#00f5ff' },
+      { x: 300, y: 440, r: 28, pts: 400, color: '#05ffa1' }
+    ];
+
+    const wallSlingshots = [
+      { x: 75, y: 550, r: 24, pts: 350, color: '#ffd32a', kickX: 12, kickY: -10 },
+      { x: 525, y: 550, r: 24, pts: 350, color: '#ffd32a', kickX: -12, kickY: -10 }
     ];
 
     function startGame() {
@@ -85,9 +90,9 @@
     }
 
     function resetBall() {
-      ball.x = 300; ball.y = 200;
-      ball.vx = (Math.random() - 0.5) * 8;
-      ball.vy = -6;
+      ball.x = 300; ball.y = 180;
+      ball.vx = (Math.random() - 0.5) * 6;
+      ball.vy = -5;
       playSfx(500, 0.2);
     }
 
@@ -119,19 +124,26 @@
     function loop() {
       if (!gameActive) return;
 
-      // Ball Physics
-      ball.vy += 0.28; // Gravity
+      // Ball Physics with comfortable gravity
+      ball.vy += 0.24;
       ball.x += ball.vx;
       ball.y += ball.vy;
 
+      // Terminal velocity clamp
+      const spd = Math.hypot(ball.vx, ball.vy);
+      if (spd > 22) {
+        ball.vx = (ball.vx / spd) * 22;
+        ball.vy = (ball.vy / spd) * 22;
+      }
+
       // Wall Collisions
-      if (ball.x < 40 + ball.r) { ball.x = 40 + ball.r; ball.vx *= -0.85; playSfx(300, 0.05); }
-      if (ball.x > 560 - ball.r) { ball.x = 560 - ball.r; ball.vx *= -0.85; playSfx(300, 0.05); }
-      if (ball.y < 40 + ball.r) { ball.y = 40 + ball.r; ball.vy *= -0.85; playSfx(300, 0.05); }
+      if (ball.x < 40 + ball.r) { ball.x = 40 + ball.r; ball.vx = Math.abs(ball.vx) * 0.85; playSfx(300, 0.05); }
+      if (ball.x > 560 - ball.r) { ball.x = 560 - ball.r; ball.vx = -Math.abs(ball.vx) * 0.85; playSfx(300, 0.05); }
+      if (ball.y < 40 + ball.r) { ball.y = 40 + ball.r; ball.vy = Math.abs(ball.vy) * 0.85; playSfx(300, 0.05); }
 
       // Smooth Flipper movement
-      leftFlipper.angle += (leftFlipper.targetAngle - leftFlipper.angle) * 0.4;
-      rightFlipper.angle += (rightFlipper.targetAngle - rightFlipper.angle) * 0.4;
+      leftFlipper.angle += (leftFlipper.targetAngle - leftFlipper.angle) * 0.45;
+      rightFlipper.angle += (rightFlipper.targetAngle - rightFlipper.angle) * 0.45;
 
       // Check Bumper Hits
       bumpers.forEach(b => {
@@ -152,6 +164,21 @@
         }
       });
 
+      // Check Wall Slingshots
+      wallSlingshots.forEach(s => {
+        const dist = Math.hypot(ball.x - s.x, ball.y - s.y);
+        if (dist < ball.r + s.r) {
+          ball.vx = s.kickX;
+          ball.vy = s.kickY;
+          score += s.pts;
+          document.getElementById('score-val').textContent = score;
+          playSfx(950, 0.15);
+          for (let i=0; i<10; i++) {
+            particles.push({ x: s.x, y: s.y, vx:(Math.random()-0.5)*8, vy:(Math.random()-0.5)*8, color: s.color, life: 1 });
+          }
+        }
+      });
+
       // Flipper Collisions
       [leftFlipper, rightFlipper].forEach(f => {
         const tipX = f.x + Math.cos(f.angle) * f.length;
@@ -164,11 +191,11 @@
         const projY = f.y + t * (tipY - f.y);
         const dist = Math.hypot(ball.x - projX, ball.y - projY);
 
-        if (dist < ball.r + 10) {
+        if (dist < ball.r + 12) {
           const normalAngle = f.angle + (f.isLeft ? -Math.PI/2 : Math.PI/2);
-          const impulse = Math.abs(f.targetAngle - f.angle) > 0.05 ? 18 : 11;
+          const impulse = Math.abs(f.targetAngle - f.angle) > 0.05 ? 19 : 12;
           ball.vx = Math.cos(normalAngle) * impulse + (Math.random() - 0.5) * 4;
-          ball.vy = -Math.abs(Math.sin(normalAngle) * impulse) - 4;
+          ball.vy = -Math.abs(Math.sin(normalAngle) * impulse) - 5;
           score += 100;
           document.getElementById('score-val').textContent = score;
           playSfx(650, 0.1);
@@ -195,6 +222,16 @@
       ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 20;
       ctx.strokeRect(30, 30, 540, 740);
       ctx.shadowBlur = 0;
+
+      // Draw Wall Slingshots
+      wallSlingshots.forEach(s => {
+        ctx.fillStyle = s.color;
+        ctx.shadowColor = s.color; ctx.shadowBlur = 15;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.4, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+      });
 
       // Draw Bumpers
       bumpers.forEach(b => {
