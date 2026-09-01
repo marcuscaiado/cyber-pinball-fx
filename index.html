@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Cyber Pinball FX ⚡🎰</title>
+  <script src="arcade-leaderboard.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; touch-action:none; user-select:none; }
+    body { background:#070914; color:#fff; font-family:'Segoe UI',sans-serif; overflow:hidden; display:flex; justify-content:center; align-items:center; height:100vh; }
+    #canvas-container { position:relative; width:100vw; height:100vh; max-width:600px; }
+    @media (max-width: 600px) { .hud { font-size:16px; } .arcade-nav { font-size:11px; padding:6px 10px; } .flip-touch-btn { height:85px; font-size:18px; } }
+    canvas { width:100%; height:100%; display:block; background:#070914; }
+    .arcade-nav { position:absolute; top:16px; right:16px; z-index:100; background:rgba(0,0,0,0.7); border:2px solid #ff007f; color:#ff007f; padding:8px 16px; border-radius:8px; font-weight:bold; text-decoration:none; font-size:13px; box-shadow:0 0 15px rgba(255,0,127,0.4); }
+    .hud { position:absolute; top:16px; left:16px; font-family:monospace; font-size:20px; font-weight:bold; color:#00f5ff; text-shadow:0 0 10px #00f5ff; pointer-events:none; }
+    .touch-controls { position:absolute; bottom:16px; left:16px; right:16px; display:flex; justify-content:space-between; gap:16px; pointer-events:none; }
+    .flip-touch-btn { flex:1; height:80px; background:rgba(0,245,255,0.15); border:2px solid #00f5ff; border-radius:12px; color:#fff; font-weight:bold; font-size:20px; display:flex; align-items:center; justify-content:center; pointer-events:auto; box-shadow:0 0 15px rgba(0,245,255,0.3); }
+    .flip-touch-btn:active { background:#00f5ff; color:#000; }
+    .flip-r { background:rgba(255,0,127,0.15); border-color:#ff007f; box-shadow:0 0 15px rgba(255,0,127,0.3); }
+    .flip-r:active { background:#ff007f; color:#fff; }
+    #modal { position:absolute; inset:0; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:200; }
+    #modal h1 { color:#ff007f; font-size:38px; text-shadow:0 0 20px #ff007f; text-align:center; }
+    .btn { background:linear-gradient(135deg,#ff007f,#00f5ff); border:none; color:#fff; padding:12px 32px; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; text-decoration:none; box-shadow:0 0 20px rgba(255,0,127,0.5); }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <a href="https://marcuscaiado.github.io/marcus-arcade/" class="arcade-nav">🕹️ Arcade Hub</a>
+    <div class="hud">SCORE: <span id="score-val">0</span> | BALLS: <span id="balls-val">3</span></div>
+    <canvas id="gameCanvas" width="600" height="800"></canvas>
+    
+    <div class="touch-controls">
+      <div class="flip-touch-btn" id="btn-left">◀ FLIP L</div>
+      <div class="flip-touch-btn flip-r" id="btn-right">FLIP R ▶</div>
+    </div>
+
+    <div id="modal">
+      <h1 id="modal-title">CYBER PINBALL FX ⚡</h1>
+      <p style="font-size:15px; color:#aaa;" id="modal-sub">Left / Right Arrow or Tap buttons to flip</p>
+      <button class="btn" onclick="startGame()">LAUNCH BALL 🚀</button>
+      <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn" style="background:#222; color:#fff; border:1px solid #ff007f;">ARCADE HUB 🕹️</a>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Audio
+    let audioCtx = null;
+    function getAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+    function playSfx(freq, dur) {
+      try {
+        const c = getAudio(); const osc = c.createOscillator(); const g = c.createGain();
+        osc.frequency.value = freq; g.gain.setValueAtTime(0.15, c.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+        osc.connect(g); g.connect(c.destination); osc.start(); osc.stop(c.currentTime + dur);
+      } catch(e){}
+    }
+
+    let ball = { x: 300, y: 350, vx: 3, vy: -12, r: 12 };
+    let score = 0, balls = 3, gameActive = false;
+    let particles = [];
+
+    // Flippers
+    let leftFlipper = { x: 180, y: 700, length: 90, angle: 0.35, targetAngle: 0.35, isLeft: true };
+    let rightFlipper = { x: 420, y: 700, length: 90, angle: Math.PI - 0.35, targetAngle: Math.PI - 0.35, isLeft: false };
+
+    // Bumpers
+    const bumpers = [
+      { x: 300, y: 220, r: 35, pts: 500, color: '#ff007f' },
+      { x: 200, y: 320, r: 30, pts: 250, color: '#00f5ff' },
+      { x: 400, y: 320, r: 30, pts: 250, color: '#00f5ff' },
+      { x: 300, y: 440, r: 25, pts: 400, color: '#05ffa1' }
+    ];
+
+    function startGame() {
+      score = 0; balls = 3;
+      document.getElementById('score-val').textContent = '0';
+      document.getElementById('balls-val').textContent = '3';
+      document.getElementById('modal').style.display = 'none';
+      resetBall();
+      gameActive = true;
+      requestAnimationFrame(loop);
+    }
+
+    function resetBall() {
+      ball.x = 300; ball.y = 200;
+      ball.vx = (Math.random() - 0.5) * 8;
+      ball.vy = -6;
+      playSfx(500, 0.2);
+    }
+
+    function setFlip(left, active) {
+      if (left) {
+        leftFlipper.targetAngle = active ? -0.45 : 0.35;
+      } else {
+        rightFlipper.targetAngle = active ? Math.PI + 0.45 : Math.PI - 0.35;
+      }
+      if (active) playSfx(left ? 700 : 750, 0.08);
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') setFlip(true, true);
+      if (e.key === 'ArrowRight' || e.key === 'd') setFlip(false, true);
+    });
+    window.addEventListener('keyup', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') setFlip(true, false);
+      if (e.key === 'ArrowRight' || e.key === 'd') setFlip(false, false);
+    });
+
+    const btnL = document.getElementById('btn-left');
+    const btnR = document.getElementById('btn-right');
+    btnL.addEventListener('touchstart', e => { e.preventDefault(); setFlip(true, true); });
+    btnL.addEventListener('touchend', e => { e.preventDefault(); setFlip(true, false); });
+    btnR.addEventListener('touchstart', e => { e.preventDefault(); setFlip(false, true); });
+    btnR.addEventListener('touchend', e => { e.preventDefault(); setFlip(false, false); });
+
+    function loop() {
+      if (!gameActive) return;
+
+      // Ball Physics
+      ball.vy += 0.28; // Gravity
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Wall Collisions
+      if (ball.x < 40 + ball.r) { ball.x = 40 + ball.r; ball.vx *= -0.85; playSfx(300, 0.05); }
+      if (ball.x > 560 - ball.r) { ball.x = 560 - ball.r; ball.vx *= -0.85; playSfx(300, 0.05); }
+      if (ball.y < 40 + ball.r) { ball.y = 40 + ball.r; ball.vy *= -0.85; playSfx(300, 0.05); }
+
+      // Smooth Flipper movement
+      leftFlipper.angle += (leftFlipper.targetAngle - leftFlipper.angle) * 0.4;
+      rightFlipper.angle += (rightFlipper.targetAngle - rightFlipper.angle) * 0.4;
+
+      // Check Bumper Hits
+      bumpers.forEach(b => {
+        const dist = Math.hypot(ball.x - b.x, ball.y - b.y);
+        if (dist < ball.r + b.r) {
+          const angle = Math.atan2(ball.y - b.y, ball.x - b.x);
+          const force = 14;
+          ball.vx = Math.cos(angle) * force;
+          ball.vy = Math.sin(angle) * force;
+          score += b.pts;
+          document.getElementById('score-val').textContent = score;
+          playSfx(850, 0.15);
+
+          // Sparks
+          for (let i=0; i<12; i++) {
+            particles.push({ x: b.x, y: b.y, vx:(Math.random()-0.5)*8, vy:(Math.random()-0.5)*8, color: b.color, life: 1 });
+          }
+        }
+      });
+
+      // Flipper Collisions
+      [leftFlipper, rightFlipper].forEach(f => {
+        const tipX = f.x + Math.cos(f.angle) * f.length;
+        const tipY = f.y + Math.sin(f.angle) * f.length;
+        
+        // Distance to line segment
+        const l2 = f.length * f.length;
+        const t = Math.max(0, Math.min(1, ((ball.x - f.x) * (tipX - f.x) + (ball.y - f.y) * (tipY - f.y)) / l2));
+        const projX = f.x + t * (tipX - f.x);
+        const projY = f.y + t * (tipY - f.y);
+        const dist = Math.hypot(ball.x - projX, ball.y - projY);
+
+        if (dist < ball.r + 10) {
+          const normalAngle = f.angle + (f.isLeft ? -Math.PI/2 : Math.PI/2);
+          const impulse = Math.abs(f.targetAngle - f.angle) > 0.05 ? 18 : 11;
+          ball.vx = Math.cos(normalAngle) * impulse + (Math.random() - 0.5) * 4;
+          ball.vy = -Math.abs(Math.sin(normalAngle) * impulse) - 4;
+          score += 100;
+          document.getElementById('score-val').textContent = score;
+          playSfx(650, 0.1);
+        }
+      });
+
+      // Ball Drain (Bottom)
+      if (ball.y > 820) {
+        balls--;
+        document.getElementById('balls-val').textContent = balls;
+        if (balls <= 0) {
+          gameOver();
+          return;
+        } else {
+          resetBall();
+        }
+      }
+
+      // Render
+      ctx.fillStyle = '#070914'; ctx.fillRect(0, 0, 600, 800);
+
+      // Arena Outer Border
+      ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 4;
+      ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 20;
+      ctx.strokeRect(30, 30, 540, 740);
+      ctx.shadowBlur = 0;
+
+      // Draw Bumpers
+      bumpers.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color; ctx.shadowBlur = 20;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.35, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // Draw Flippers
+      [leftFlipper, rightFlipper].forEach(f => {
+        ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 14; ctx.lineCap = 'round';
+        ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.moveTo(f.x, f.y);
+        ctx.lineTo(f.x + Math.cos(f.angle) * f.length, f.y + Math.sin(f.angle) * f.length);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      });
+
+      // Draw Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy; p.life -= 0.04;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x, p.y, 4, 4);
+        ctx.globalAlpha = 1;
+      }
+
+      // Draw Chrome Ball
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 20;
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+
+      requestAnimationFrame(loop);
+    }
+
+    function gameOver() {
+      gameActive = false;
+      document.getElementById('modal-title').textContent = 'GAME OVER! 🎰';
+      document.getElementById('modal-sub').textContent = `FINAL SCORE: ${score.toLocaleString()}`;
+      document.getElementById('modal').style.display = 'flex';
+      try {
+        if (window.ArcadeLeaderboard) {
+          window.ArcadeLeaderboard.submitScore('cyber-pinball-fx', score);
+        }
+      } catch(e){}
+    }
+  </script>
+</body>
+</html>
