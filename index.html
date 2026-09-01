@@ -2,282 +2,1211 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Cyber Pinball FX ⚡🎰</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>Cyber Pinball FX ⚡🎰 - Cyberpunk Arcade</title>
   <script src="arcade-leaderboard.js"></script>
   <style>
+    :root {
+      --primary: #ff007f;
+      --secondary: #00f5ff;
+      --accent: #05ffa1;
+      --gold: #ffd700;
+      --bg-dark: #070914;
+      --panel: rgba(12, 16, 32, 0.88);
+    }
     * { margin:0; padding:0; box-sizing:border-box; touch-action:none; user-select:none; }
-    body { background:#070914; color:#fff; font-family:'Segoe UI',sans-serif; overflow:hidden; display:flex; justify-content:center; align-items:center; height:100vh; }
-    #canvas-container { position:relative; width:100vw; height:100vh; max-width:600px; }
-    @media (max-width: 600px) { .hud { font-size:16px; } .arcade-nav { font-size:11px; padding:6px 10px; } .flip-touch-btn { height:85px; font-size:18px; } }
-    canvas { width:100%; height:100%; display:block; background:#070914; }
-    .arcade-nav { position:absolute; top:16px; right:16px; z-index:100; background:rgba(0,0,0,0.7); border:2px solid #ff007f; color:#ff007f; padding:8px 16px; border-radius:8px; font-weight:bold; text-decoration:none; font-size:13px; box-shadow:0 0 15px rgba(255,0,127,0.4); }
-    .hud { position:absolute; top:16px; left:16px; font-family:monospace; font-size:20px; font-weight:bold; color:#00f5ff; text-shadow:0 0 10px #00f5ff; pointer-events:none; }
-    .touch-controls { position:absolute; bottom:16px; left:16px; right:16px; display:flex; justify-content:space-between; gap:16px; pointer-events:none; }
-    .flip-touch-btn { flex:1; height:80px; background:rgba(0,245,255,0.15); border:2px solid #00f5ff; border-radius:12px; color:#fff; font-weight:bold; font-size:20px; display:flex; align-items:center; justify-content:center; pointer-events:auto; box-shadow:0 0 15px rgba(0,245,255,0.3); }
-    .flip-touch-btn:active { background:#00f5ff; color:#000; }
-    .flip-r { background:rgba(255,0,127,0.15); border-color:#ff007f; box-shadow:0 0 15px rgba(255,0,127,0.3); }
-    .flip-r:active { background:#ff007f; color:#fff; }
-    #modal { position:absolute; inset:0; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:200; }
-    #modal h1 { color:#ff007f; font-size:38px; text-shadow:0 0 20px #ff007f; text-align:center; }
-    .btn { background:linear-gradient(135deg,#ff007f,#00f5ff); border:none; color:#fff; padding:12px 32px; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; text-decoration:none; box-shadow:0 0 20px rgba(255,0,127,0.5); }
+    body {
+      background: #03050a;
+      color: #fff;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+    }
+    #game-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 580px;
+      max-height: 860px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas#table-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(0, 245, 255, 0.25), 0 20px 60px rgba(0,0,0,0.8);
+      background: var(--bg-dark);
+    }
+
+    /* Top Navigation */
+    .arcade-nav {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 100;
+      background: var(--panel);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-weight: bold;
+      text-decoration: none;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.35);
+      transition: all 0.2s ease;
+    }
+    .arcade-nav:hover {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.7);
+    }
+
+    /* Touch Interaction Zones */
+    .touch-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      pointer-events: none;
+      z-index: 40;
+    }
+    .touch-zone {
+      flex: 1;
+      height: 100%;
+      pointer-events: auto;
+    }
+    .touch-zone.plunger-zone {
+      flex: 0 0 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 30px;
+    }
+    .touch-flipper-btn {
+      position: absolute;
+      bottom: 16px;
+      width: 130px;
+      height: 70px;
+      background: rgba(0, 245, 255, 0.12);
+      border: 2px solid var(--secondary);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+      pointer-events: auto;
+      backdrop-filter: blur(6px);
+    }
+    .touch-flipper-btn.left { left: 16px; }
+    .touch-flipper-btn.right {
+      right: 90px;
+      background: rgba(255, 0, 127, 0.12);
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
+    }
+    .touch-flipper-btn:active {
+      transform: scale(0.95);
+      background: var(--secondary);
+      color: #000;
+    }
+    .touch-flipper-btn.right:active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .plunger-touch-btn {
+      width: 60px;
+      height: 90px;
+      background: linear-gradient(180deg, #ff007f, #ffd700);
+      border: 2px solid #fff;
+      border-radius: 30px;
+      color: #000;
+      font-size: 11px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+      transition: transform 0.1s ease;
+      pointer-events: auto;
+    }
+    .plunger-touch-btn:active {
+      transform: translateY(20px) scale(0.95);
+    }
+
+    @media (max-width: 650px) {
+      .touch-flipper-btn { display: flex; }
+    }
+
+    /* Modal / Popups */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(10, 14, 28, 0.9) 0%, rgba(3, 5, 10, 0.98) 100%);
+      backdrop-filter: blur(14px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+    .modal-card {
+      background: rgba(15, 22, 42, 0.95);
+      border: 1px solid rgba(255, 0, 127, 0.4);
+      border-radius: 20px;
+      padding: 30px;
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.85), 0 0 30px rgba(255, 0, 127, 0.25);
+    }
+    .modal-title {
+      font-size: 36px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ff007f, #00f5ff, #05ffa1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 25px rgba(255, 0, 127, 0.4);
+    }
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, #ff007f 0%, #00f5ff 100%);
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 17px;
+      font-weight: 900;
+      color: #fff;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.5);
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 35px rgba(255, 0, 127, 0.8);
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #94a3b8;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-secondary:hover {
+      border-color: #fff;
+      color: #fff;
+    }
+
+    /* Keybinds Legend */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+    }
+    .ctrl-item {
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5e1;
+    }
+    .ctrl-key {
+      color: var(--secondary);
+      font-weight: bold;
+      background: rgba(0,245,255,0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
-  <div id="canvas-container">
+  <div id="game-wrapper">
     <a href="https://marcuscaiado.github.io/marcus-arcade/" class="arcade-nav">🕹️ Arcade Hub</a>
-    <div class="hud">SCORE: <span id="score-val">0</span> | BALLS: <span id="balls-val">3</span></div>
-    <canvas id="gameCanvas" width="600" height="800"></canvas>
-    
-    <div class="touch-controls">
-      <div class="flip-touch-btn" id="btn-left">◀ FLIP L</div>
-      <div class="flip-touch-btn flip-r" id="btn-right">FLIP R ▶</div>
+    <canvas id="table-canvas" width="540" height="800"></canvas>
+
+    <!-- Touch & Button Overlays -->
+    <div class="touch-overlay">
+      <div class="touch-zone" id="touch-left"></div>
+      <div class="touch-zone" id="touch-right"></div>
+      <div class="touch-zone plunger-zone" id="touch-plunger">
+        <div class="plunger-touch-btn" id="btn-plunger">PULL<br>🚀<br>LAUNCH</div>
+      </div>
     </div>
 
-    <div id="modal">
-      <h1 id="modal-title">CYBER PINBALL FX ⚡</h1>
-      <p style="font-size:15px; color:#aaa;" id="modal-sub">Left / Right Arrow or Tap buttons to flip</p>
-      <button class="btn" onclick="startGame()">LAUNCH BALL 🚀</button>
-      <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn" style="background:#222; color:#fff; border:1px solid #ff007f;">ARCADE HUB 🕹️</a>
+    <div class="touch-flipper-btn left" id="btn-touch-l">◀ FLIP L</div>
+    <div class="touch-flipper-btn right" id="btn-touch-r">FLIP R ▶</div>
+
+    <!-- Start / Rules Modal -->
+    <div class="modal-backdrop" id="start-modal">
+      <div class="modal-card">
+        <h1 class="modal-title">CYBER PINBALL FX</h1>
+        <p style="font-size:14px; color:#94a3b8; margin-top:-8px;">True Kinetic Physics &bull; Multiball &bull; Cyber Ramps</p>
+
+        <div class="controls-grid">
+          <div class="ctrl-item"><span>Left Flipper:</span> <span class="ctrl-key">LEFT / A</span></div>
+          <div class="ctrl-item"><span>Right Flipper:</span> <span class="ctrl-key">RIGHT / D</span></div>
+          <div class="ctrl-item"><span>Launch Ball:</span> <span class="ctrl-key">SPACE / DOWN</span></div>
+          <div class="ctrl-item"><span>Nudge Table:</span> <span class="ctrl-key">UP / W</span></div>
+        </div>
+
+        <button class="btn" onclick="startNewGame()">INSERT COIN & PLAY 🚀</button>
+        <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn-secondary">🕹️ BACK TO ARCADE HUB</a>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal-backdrop" id="gameover-modal" style="display:none;">
+      <div class="modal-card">
+        <h1 class="modal-title" style="background:linear-gradient(135deg,#ff007f,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">GAME OVER! 🎰</h1>
+        <p style="font-size:14px; color:#94a3b8;">BALL 3 DRAINED</p>
+
+        <div style="display:flex; justify-content:space-around; width:100%; background:rgba(0,0,0,0.4); padding:14px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+          <div>
+            <div style="font-size:10px; color:#7b8fa7; font-weight:bold; text-transform:uppercase;">Final Score</div>
+            <div style="font-size:24px; font-weight:900; color:var(--secondary); font-family:monospace;" id="final-score">0</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:#7b8fa7; font-weight:bold; text-transform:uppercase;">Multiballs</div>
+            <div style="font-size:24px; font-weight:900; color:var(--primary); font-family:monospace;" id="final-multiballs">0</div>
+          </div>
+        </div>
+
+        <button class="btn" onclick="startNewGame()">PLAY AGAIN 🔄</button>
+        <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn-secondary">🕹️ ARCADE HUB</a>
+      </div>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // Audio
+    /* ==========================================================================
+       1. AUDIO ENGINE (Web Audio API Synthesizer)
+       ========================================================================== */
     let audioCtx = null;
-    function getAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
-    function playSfx(freq, dur) {
+    function getAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playAudioTone(type, freq = 400, dur = 0.1) {
       try {
-        const c = getAudio(); const osc = c.createOscillator(); const g = c.createGain();
-        osc.frequency.value = freq; g.gain.setValueAtTime(0.15, c.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
-        osc.connect(g); g.connect(c.destination); osc.start(); osc.stop(c.currentTime + dur);
+        const c = getAudio();
+        const now = c.currentTime;
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+
+        if (type === 'flipper') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(now); osc.stop(now + 0.06);
+        } else if (type === 'bumper') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.exponentialRampToValueAtTime(freq * 1.8, now + 0.12);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(now); osc.stop(now + 0.14);
+        } else if (type === 'slingshot') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(700, now);
+          osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'target') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'spinner') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(900 + Math.random() * 400, now);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(now); osc.stop(now + 0.03);
+        } else if (type === 'jackpot') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.linearRampToValueAtTime(1200, now + 0.3);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(now); osc.stop(now + 0.35);
+        } else if (type === 'plunger') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(120, now);
+          osc.frequency.linearRampToValueAtTime(450, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(now); osc.stop(now + 0.15);
+        }
       } catch(e){}
     }
 
-    let ball = { x: 300, y: 350, vx: 3, vy: -12, r: 12 };
-    let score = 0, balls = 3, gameActive = false;
-    let particles = [];
+    /* ==========================================================================
+       2. CANVAS & TABLE GEOMETRY
+       ========================================================================== */
+    const canvas = document.getElementById('table-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 540;
+    const H = 800;
 
-    // Wider arcade flippers
-    let leftFlipper = { x: 165, y: 700, length: 105, angle: 0.35, targetAngle: 0.35, isLeft: true };
-    let rightFlipper = { x: 435, y: 700, length: 105, angle: Math.PI - 0.35, targetAngle: Math.PI - 0.35, isLeft: false };
+    // Game State
+    let score = 0;
+    let ballsRemaining = 3;
+    let multiplier = 1;
+    let isPlaying = false;
+    let ballSaveTimer = 0;
+    let dmdMessage = "PRESS LAUNCH TO START";
+    let dmdTimer = 0;
+    let multiballCount = 0;
 
-    // Bumpers & Wall Slingshots
+    // Physics Balls Array (supports authentic MULTIBALL!)
+    let balls = [];
+
+    // Plunger (Spring Launcher)
+    const plunger = {
+      x: 504,
+      y: 720,
+      width: 24,
+      height: 60,
+      pull: 0,
+      maxPull: 55,
+      isPulling: false
+    };
+
+    // Flippers
+    const leftFlipper = {
+      pivotX: 165,
+      pivotY: 710,
+      length: 82,
+      restAngle: 0.52,      // Resting down angle (approx 30 deg)
+      activeAngle: -0.52,   // Flipped up angle
+      currentAngle: 0.52,
+      angularVelocity: 0,
+      isFlipping: false,
+      isLeft: true
+    };
+
+    const rightFlipper = {
+      pivotX: 345,
+      pivotY: 710,
+      length: 82,
+      restAngle: Math.PI - 0.52,
+      activeAngle: Math.PI + 0.52,
+      currentAngle: Math.PI - 0.52,
+      angularVelocity: 0,
+      isFlipping: false,
+      isLeft: false
+    };
+
+    // Pop Bumpers (The Cyber Triad)
     const bumpers = [
-      { x: 300, y: 220, r: 36, pts: 500, color: '#ff007f' },
-      { x: 200, y: 320, r: 32, pts: 250, color: '#00f5ff' },
-      { x: 400, y: 320, r: 32, pts: 250, color: '#00f5ff' },
-      { x: 300, y: 440, r: 28, pts: 400, color: '#05ffa1' }
+      { x: 255, y: 220, r: 32, basePts: 500, color: '#ff007f', flash: 0, label: '500' },
+      { x: 175, y: 310, r: 28, basePts: 250, color: '#00f5ff', flash: 0, label: '250' },
+      { x: 335, y: 310, r: 28, basePts: 250, color: '#00f5ff', flash: 0, label: '250' }
     ];
 
-    const wallSlingshots = [
-      { x: 75, y: 550, r: 24, pts: 350, color: '#ffd32a', kickX: 12, kickY: -10 },
-      { x: 525, y: 550, r: 24, pts: 350, color: '#ffd32a', kickX: -12, kickY: -10 }
-    ];
-
-    function startGame() {
-      score = 0; balls = 3;
-      document.getElementById('score-val').textContent = '0';
-      document.getElementById('balls-val').textContent = '3';
-      document.getElementById('modal').style.display = 'none';
-      resetBall();
-      gameActive = true;
-      requestAnimationFrame(loop);
-    }
-
-    function resetBall() {
-      ball.x = 300; ball.y = 180;
-      ball.vx = (Math.random() - 0.5) * 6;
-      ball.vy = -5;
-      playSfx(500, 0.2);
-    }
-
-    function setFlip(left, active) {
-      if (left) {
-        leftFlipper.targetAngle = active ? -0.45 : 0.35;
-      } else {
-        rightFlipper.targetAngle = active ? Math.PI + 0.45 : Math.PI - 0.35;
+    // Slingshots (Left & Right Solenoid Kickers)
+    const slingshots = [
+      {
+        p1: { x: 105, y: 550 },
+        p2: { x: 105, y: 645 },
+        p3: { x: 145, y: 610 },
+        kickX: 13,
+        kickY: -11,
+        flash: 0,
+        color: '#05ffa1'
+      },
+      {
+        p1: { x: 405, y: 550 },
+        p2: { x: 405, y: 645 },
+        p3: { x: 365, y: 610 },
+        kickX: -13,
+        kickY: -11,
+        flash: 0,
+        color: '#05ffa1'
       }
-      if (active) playSfx(left ? 700 : 750, 0.08);
+    ];
+
+    // Top Rollover Skill Lanes (C - Y - B - R)
+    const rollovers = [
+      { x: 140, y: 120, width: 28, height: 40, label: 'C', lit: false },
+      { x: 195, y: 110, width: 28, height: 40, label: 'Y', lit: false },
+      { x: 250, y: 105, width: 28, height: 40, label: 'B', lit: false },
+      { x: 305, y: 110, width: 28, height: 40, label: 'R', lit: false }
+    ];
+
+    // Drop Target Bank (H - A - C - K)
+    const dropTargets = [
+      { x: 75, y: 350, width: 10, height: 26, label: 'H', hit: false },
+      { x: 75, y: 385, width: 10, height: 26, label: 'A', hit: false },
+      { x: 75, y: 420, width: 10, height: 26, label: 'C', hit: false },
+      { x: 75, y: 455, width: 10, height: 26, label: 'K', hit: false }
+    ];
+
+    // Kinetic Spinner Target
+    const spinner = {
+      x: 395,
+      y: 220,
+      width: 28,
+      height: 8,
+      angle: 0,
+      spinSpeed: 0
+    };
+
+    // Table Boundary Segments (Static Walls & Guide Rails)
+    const tableWalls = [];
+    function buildTableWalls() {
+      tableWalls.length = 0;
+
+      // Shooter Lane Right Wall & Bottom
+      addWall(528, 770, 528, 180);
+      // Shooter Lane Inner Divider
+      addWall(480, 750, 480, 240);
+
+      // Top Curved Arch (Curved deflector sending ball to top lanes)
+      const archSteps = 16;
+      for (let i = 0; i < archSteps; i++) {
+        const a1 = (i / archSteps) * (Math.PI / 2);
+        const a2 = ((i + 1) / archSteps) * (Math.PI / 2);
+        const r = 240;
+        const cx = 288;
+        const cy = 240;
+        addWall(
+          cx + Math.sin(a1) * r, cy - Math.cos(a1) * r,
+          cx + Math.sin(a2) * r, cy - Math.cos(a2) * r
+        );
+      }
+
+      // Top-Left Curve
+      for (let i = 0; i < 8; i++) {
+        const a1 = Math.PI + (i / 8) * (Math.PI / 2);
+        const a2 = Math.PI + ((i + 1) / 8) * (Math.PI / 2);
+        const r = 120;
+        const cx = 150;
+        const cy = 150;
+        addWall(
+          cx + Math.cos(a1) * r, cy + Math.sin(a1) * r,
+          cx + Math.cos(a2) * r, cy + Math.sin(a2) * r
+        );
+      }
+
+      // Left Outer Wall
+      addWall(30, 150, 30, 680);
+
+      // Left Inlane & Outlane Guide Rails (Directs ball cleanly to flipper!)
+      addWall(30, 680, 85, 755);      // Left Outlane outer wall
+      addWall(85, 755, 120, 775);
+
+      addWall(75, 540, 75, 680);      // Left Outlane divider
+      addWall(75, 680, 145, 725);     // Left Inlane wire guide to flipper
+
+      // Right Inlane & Outlane Guide Rails
+      addWall(480, 680, 425, 755);    // Right Outlane outer wall
+      addWall(425, 755, 390, 775);
+
+      addWall(435, 540, 435, 680);    // Right Outlane divider
+      addWall(435, 680, 365, 725);    // Right Inlane wire guide to flipper
+
+      // Flipper Base Stopper Posts
+      addWall(165, 710, 150, 715);
+      addWall(345, 710, 360, 715);
+    }
+    function addWall(x1, y1, x2, y2) {
+      tableWalls.push({ x1, y1, x2, y2 });
+    }
+    buildTableWalls();
+
+    // Particle Visual Effects Pool
+    const particles = [];
+    function spawnSparks(x, y, color, count = 12, speed = 6) {
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = (Math.random() * 0.7 + 0.3) * speed;
+        particles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          color,
+          life: 1.0,
+          decay: 0.03 + Math.random() * 0.03,
+          size: 2 + Math.random() * 3
+        });
+      }
+    }
+
+    /* ==========================================================================
+       3. BALL SPAWNER & MULTIBALL MANAGEMENT
+       ========================================================================== */
+    function spawnBall(inPlunger = true) {
+      if (inPlunger) {
+        balls.push({
+          x: 504,
+          y: 700,
+          vx: 0,
+          vy: 0,
+          r: 10,
+          isTrappedInPlunger: true
+        });
+      } else {
+        // Spawn from top orbit ramp for Multiball
+        balls.push({
+          x: 240 + (Math.random() - 0.5) * 40,
+          y: 140,
+          vx: (Math.random() - 0.5) * 6,
+          vy: 4,
+          r: 10,
+          isTrappedInPlunger: false
+        });
+      }
+    }
+
+    function triggerMultiball() {
+      multiballCount++;
+      setDMD("CYBER MULTIBALL ACTIVATED! ⚡", 220);
+      playAudioTone('jackpot', 500, 0.4);
+      ballSaveTimer = 18; // Generous 18s save timer during multiball
+
+      // Spawn 2 extra balls
+      spawnBall(false);
+      spawnBall(false);
+
+      spawnSparks(270, 400, '#ffd700', 40, 12);
+    }
+
+    function setDMD(text, frames = 120) {
+      dmdMessage = text;
+      dmdTimer = frames;
+    }
+
+    /* ==========================================================================
+       4. HIGH-PRECISION SUB-STEPPED PHYSICS ENGINE
+       ========================================================================== */
+    const SUB_STEPS = 10;
+    const GRAVITY = 0.22 / SUB_STEPS;
+    const DRAG = Math.pow(0.9992, 1 / SUB_STEPS);
+
+    function updatePhysics() {
+      if (!isPlaying) return;
+
+      // Update Plunger Pull / Release
+      if (plunger.isPulling) {
+        if (plunger.pull < plunger.maxPull) plunger.pull += 1.8;
+      } else if (plunger.pull > 0) {
+        // Fire plunger!
+        const launchForce = (plunger.pull / plunger.maxPull) * 23;
+        balls.forEach(b => {
+          if (b.isTrappedInPlunger && b.y >= 680) {
+            b.vy = -launchForce;
+            b.vx = (Math.random() - 0.5) * 1.0;
+            b.isTrappedInPlunger = false;
+            playAudioTone('plunger', 200, 0.15);
+            spawnSparks(504, 720, '#ffd700', 16, 8);
+          }
+        });
+        plunger.pull = 0;
+      }
+
+      // Flipper Kinematics
+      updateFlipper(leftFlipper);
+      updateFlipper(rightFlipper);
+
+      // Spinner Animation
+      if (Math.abs(spinner.spinSpeed) > 0.01) {
+        spinner.angle += spinner.spinSpeed;
+        spinner.spinSpeed *= 0.96;
+        if (Math.random() < 0.3) playAudioTone('spinner');
+      }
+
+      // Ball Save Timer
+      if (ballSaveTimer > 0) ballSaveTimer -= 1 / 60;
+
+      // Sub-stepping for ultra-stable continuous collision
+      for (let step = 0; step < SUB_STEPS; step++) {
+        for (let bIdx = balls.length - 1; bIdx >= 0; bIdx--) {
+          const b = balls[bIdx];
+
+          if (b.isTrappedInPlunger) {
+            b.vx = 0;
+            b.vy = 0;
+            b.x = 504;
+            b.y = 700 + plunger.pull * 0.4;
+            continue;
+          }
+
+          // Apply Gravity & Velocity
+          b.vy += GRAVITY;
+          b.vx *= DRAG;
+          b.vy *= DRAG;
+          b.x += b.vx / SUB_STEPS;
+          b.y += b.vy / SUB_STEPS;
+
+          // Clamp terminal speed
+          const spd = Math.hypot(b.vx, b.vy);
+          if (spd > 26) {
+            b.vx = (b.vx / spd) * 26;
+            b.vy = (b.vy / spd) * 26;
+          }
+
+          // 1. Collide with Static Walls
+          for (const w of tableWalls) {
+            collideBallSegment(b, w.x1, w.y1, w.x2, w.y2, 0.72);
+          }
+
+          // 2. Collide with Pop Bumpers
+          for (const bmp of bumpers) {
+            const dx = b.x - bmp.x;
+            const dy = b.y - bmp.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < b.r + bmp.r) {
+              const nx = dx / dist;
+              const ny = dy / dist;
+              // Bounce with explosive bumper impulse
+              const kick = 15;
+              b.vx = nx * kick;
+              b.vy = ny * kick;
+              b.x = bmp.x + nx * (b.r + bmp.r + 1);
+
+              bmp.flash = 12;
+              score += bmp.basePts * multiplier;
+              playAudioTone('bumper', 650 + Math.random() * 200, 0.12);
+              spawnSparks(bmp.x, bmp.y, bmp.color, 16, 9);
+              setDMD(`BUMPER HIT +${bmp.basePts * multiplier}`, 45);
+            }
+          }
+
+          // 3. Collide with Slingshots
+          for (const s of slingshots) {
+            // Triangle edge p1 -> p2
+            if (collideBallSegment(b, s.p1.x, s.p1.y, s.p2.x, s.p2.y, 0.8)) {
+              b.vx = s.kickX;
+              b.vy = s.kickY;
+              s.flash = 10;
+              score += 300 * multiplier;
+              playAudioTone('slingshot', 700, 0.08);
+              spawnSparks((s.p1.x + s.p2.x) / 2, (s.p1.y + s.p2.y) / 2, s.color, 14, 8);
+            }
+          }
+
+          // 4. Collide with Flippers (Dynamic Angular Stroke Kinematics!)
+          collideBallWithFlipper(b, leftFlipper);
+          collideBallWithFlipper(b, rightFlipper);
+
+          // 5. Collide with Drop Targets
+          for (const dt of dropTargets) {
+            if (!dt.hit) {
+              if (b.x + b.r > dt.x && b.x - b.r < dt.x + dt.width &&
+                  b.y + b.r > dt.y && b.y - b.r < dt.y + dt.height) {
+                dt.hit = true;
+                b.vx = Math.abs(b.vx) * 0.8;
+                score += 1000 * multiplier;
+                playAudioTone('target', 800, 0.1);
+                spawnSparks(dt.x + 5, dt.y + 13, '#00f5ff', 12, 6);
+
+                // Check if all 4 targets dropped
+                if (dropTargets.every(t => t.hit)) {
+                  triggerMultiball();
+                  setTimeout(() => dropTargets.forEach(t => t.hit = false), 4000);
+                }
+              }
+            }
+          }
+
+          // 6. Check Rollover Skill Lanes
+          for (const ro of rollovers) {
+            if (!ro.lit && b.x > ro.x && b.x < ro.x + ro.width && b.y > ro.y && b.y < ro.y + ro.height) {
+              ro.lit = true;
+              score += 1500;
+              playAudioTone('target', 950 + rollovers.indexOf(ro) * 150, 0.12);
+              spawnSparks(ro.x + 14, ro.y + 20, '#05ffa1', 10, 5);
+
+              // If all lit -> increase multiplier
+              if (rollovers.every(r => r.lit)) {
+                multiplier = Math.min(10, multiplier + 1);
+                setDMD(`${multiplier}X MULTIPLIER ACTIVE! ⭐`, 120);
+                playAudioTone('jackpot', 700, 0.25);
+                setTimeout(() => rollovers.forEach(r => r.lit = false), 2000);
+              }
+            }
+          }
+
+          // 7. Check Spinner Target
+          if (Math.abs(b.x - spinner.x) < 18 && Math.abs(b.y - spinner.y) < 18) {
+            spinner.spinSpeed += Math.abs(b.vy) * 0.4 + 1.2;
+            score += 200 * multiplier;
+            playAudioTone('spinner');
+          }
+
+          // 8. Ball Drain (Bottom of Table)
+          if (b.y > H + 20) {
+            balls.splice(bIdx, 1);
+
+            // Ball Save Active?
+            if (ballSaveTimer > 0) {
+              setDMD("CYBER SHIELD BALL SAVE! 🛡️", 90);
+              playAudioTone('jackpot', 880, 0.2);
+              spawnBall(true);
+            } else if (balls.length === 0) {
+              // No balls left in play
+              ballsRemaining--;
+              if (ballsRemaining > 0) {
+                setDMD(`BALL ${4 - ballsRemaining} READY`, 90);
+                ballSaveTimer = 10;
+                spawnBall(true);
+              } else {
+                gameOver();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function updateFlipper(f) {
+      const speed = 0.28;
+      if (f.isFlipping) {
+        f.currentAngle += (f.activeAngle - f.currentAngle) * speed;
+      } else {
+        f.currentAngle += (f.restAngle - f.currentAngle) * speed;
+      }
+    }
+
+    function collideBallSegment(b, x1, y1, x2, y2, restitution = 0.75) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) return false;
+
+      const t = Math.max(0, Math.min(1, ((b.x - x1) * dx + (b.y - y1) * dy) / lenSq));
+      const projX = x1 + t * dx;
+      const projY = y1 + t * dy;
+
+      const dist = Math.hypot(b.x - projX, b.y - projY);
+      if (dist < b.r) {
+        const nx = (b.x - projX) / (dist || 1);
+        const ny = (b.y - projY) / (dist || 1);
+
+        // Separate
+        b.x = projX + nx * b.r;
+        b.y = projY + ny * b.r;
+
+        // Reflect velocity
+        const dot = b.vx * nx + b.vy * ny;
+        if (dot < 0) {
+          b.vx -= (1 + restitution) * dot * nx;
+          b.vy -= (1 + restitution) * dot * ny;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function collideBallWithFlipper(b, f) {
+      const tipX = f.pivotX + Math.cos(f.currentAngle) * f.length;
+      const tipY = f.pivotY + Math.sin(f.currentAngle) * f.length;
+
+      const dx = tipX - f.pivotX;
+      const dy = tipY - f.pivotY;
+      const lenSq = dx * dx + dy * dy;
+      const t = Math.max(0, Math.min(1, ((b.x - f.pivotX) * dx + (b.y - f.pivotY) * dy) / lenSq));
+
+      const projX = f.pivotX + t * dx;
+      const projY = f.pivotY + t * dy;
+      const dist = Math.hypot(b.x - projX, b.y - projY);
+
+      const flipperThickness = 9;
+      if (dist < b.r + flipperThickness) {
+        const normalAngle = f.currentAngle + (f.isLeft ? -Math.PI / 2 : Math.PI / 2);
+        const nx = Math.cos(normalAngle);
+        const ny = Math.sin(normalAngle);
+
+        b.x = projX + nx * (b.r + flipperThickness);
+        b.y = projY + ny * (b.r + flipperThickness);
+
+        // Calculate angular momentum imparted by the stroke
+        const isStrokeActive = f.isFlipping && Math.abs(f.currentAngle - f.activeAngle) > 0.08;
+        const flipperSpeed = isStrokeActive ? 22 * (0.35 + t * 0.65) : 0;
+
+        if (isStrokeActive) {
+          b.vx = nx * flipperSpeed + (Math.random() - 0.5) * 2;
+          b.vy = ny * flipperSpeed - 4;
+          playAudioTone('flipper', f.isLeft ? 600 : 660, 0.07);
+          spawnSparks(b.x, b.y, f.isLeft ? '#00f5ff' : '#ff007f', 10, 7);
+          score += 50;
+        } else {
+          // Ball rolling smoothly down resting or held flipper
+          const dot = b.vx * nx + b.vy * ny;
+          if (dot < 0) {
+            b.vx -= 1.4 * dot * nx;
+            b.vy -= 1.4 * dot * ny;
+          }
+        }
+      }
+    }
+
+    /* ==========================================================================
+       5. CONTROLS & INPUT BINDINGS
+       ========================================================================== */
+    function setFlipperState(isLeft, active) {
+      if (isLeft) {
+        leftFlipper.isFlipping = active;
+      } else {
+        rightFlipper.isFlipping = active;
+      }
+      if (active) playAudioTone('flipper', isLeft ? 450 : 500, 0.05);
     }
 
     window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowLeft' || e.key === 'a') setFlip(true, true);
-      if (e.key === 'ArrowRight' || e.key === 'd') setFlip(false, true);
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'KeyZ') {
+        setFlipperState(true, true);
+      }
+      if (e.code === 'ArrowRight' || e.code === 'KeyD' || e.code === 'Slash') {
+        setFlipperState(false, true);
+      }
+      if (e.code === 'Space' || e.code === 'ArrowDown' || e.code === 'KeyS') {
+        plunger.isPulling = true;
+      }
     });
+
     window.addEventListener('keyup', e => {
-      if (e.key === 'ArrowLeft' || e.key === 'a') setFlip(true, false);
-      if (e.key === 'ArrowRight' || e.key === 'd') setFlip(false, false);
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'KeyZ') {
+        setFlipperState(true, false);
+      }
+      if (e.code === 'ArrowRight' || e.code === 'KeyD' || e.code === 'Slash') {
+        setFlipperState(false, false);
+      }
+      if (e.code === 'Space' || e.code === 'ArrowDown' || e.code === 'KeyS') {
+        plunger.isPulling = false;
+      }
     });
 
-    const btnL = document.getElementById('btn-left');
-    const btnR = document.getElementById('btn-right');
-    btnL.addEventListener('touchstart', e => { e.preventDefault(); setFlip(true, true); });
-    btnL.addEventListener('touchend', e => { e.preventDefault(); setFlip(true, false); });
-    btnR.addEventListener('touchstart', e => { e.preventDefault(); setFlip(false, true); });
-    btnR.addEventListener('touchend', e => { e.preventDefault(); setFlip(false, false); });
+    // Touch Zone Handlers
+    const touchL = document.getElementById('touch-left');
+    const touchR = document.getElementById('touch-right');
+    const btnTouchL = document.getElementById('btn-touch-l');
+    const btnTouchR = document.getElementById('btn-touch-r');
+    const btnPlunger = document.getElementById('btn-plunger');
 
-    function loop() {
-      if (!gameActive) return;
+    function bindTouchFlipper(elem, isLeft) {
+      elem.addEventListener('touchstart', e => { e.preventDefault(); setFlipperState(isLeft, true); });
+      elem.addEventListener('touchend', e => { e.preventDefault(); setFlipperState(isLeft, false); });
+      elem.addEventListener('mousedown', e => { setFlipperState(isLeft, true); });
+      elem.addEventListener('mouseup', e => { setFlipperState(isLeft, false); });
+    }
+    bindTouchFlipper(touchL, true);
+    bindTouchFlipper(touchR, false);
+    bindTouchFlipper(btnTouchL, true);
+    bindTouchFlipper(btnTouchR, false);
 
-      // Ball Physics with comfortable gravity
-      ball.vy += 0.24;
-      ball.x += ball.vx;
-      ball.y += ball.vy;
+    btnPlunger.addEventListener('touchstart', e => { e.preventDefault(); plunger.isPulling = true; });
+    btnPlunger.addEventListener('touchend', e => { e.preventDefault(); plunger.isPulling = false; });
+    btnPlunger.addEventListener('mousedown', () => { plunger.isPulling = true; });
+    btnPlunger.addEventListener('mouseup', () => { plunger.isPulling = false; });
 
-      // Terminal velocity clamp
-      const spd = Math.hypot(ball.vx, ball.vy);
-      if (spd > 22) {
-        ball.vx = (ball.vx / spd) * 22;
-        ball.vy = (ball.vy / spd) * 22;
+    /* ==========================================================================
+       6. RENDERING ENGINE (Cyberpunk Neon Art & Effects)
+       ========================================================================== */
+    function renderTable() {
+      // Clear Dark Background
+      ctx.fillStyle = '#070914';
+      ctx.fillRect(0, 0, W, H);
+
+      // Cyber Grid Playfield Texture
+      ctx.strokeStyle = 'rgba(0, 245, 255, 0.05)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 30) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 0; y < H; y += 30) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
       }
 
-      // Wall Collisions
-      if (ball.x < 40 + ball.r) { ball.x = 40 + ball.r; ball.vx = Math.abs(ball.vx) * 0.85; playSfx(300, 0.05); }
-      if (ball.x > 560 - ball.r) { ball.x = 560 - ball.r; ball.vx = -Math.abs(ball.vx) * 0.85; playSfx(300, 0.05); }
-      if (ball.y < 40 + ball.r) { ball.y = 40 + ball.r; ball.vy = Math.abs(ball.vy) * 0.85; playSfx(300, 0.05); }
+      // Draw Top Animated DMD Screen
+      renderDMD();
 
-      // Smooth Flipper movement
-      leftFlipper.angle += (leftFlipper.targetAngle - leftFlipper.angle) * 0.45;
-      rightFlipper.angle += (rightFlipper.targetAngle - rightFlipper.angle) * 0.45;
+      // Draw Rollovers (C Y B R)
+      for (const ro of rollovers) {
+        ctx.fillStyle = ro.lit ? '#05ffa1' : 'rgba(5, 255, 161, 0.15)';
+        ctx.strokeStyle = '#05ffa1';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#05ffa1'; ctx.shadowBlur = ro.lit ? 15 : 0;
+        ctx.strokeRect(ro.x, ro.y, ro.width, ro.height);
+        ctx.fillRect(ro.x, ro.y, ro.width, ro.height);
+        ctx.shadowBlur = 0;
 
-      // Check Bumper Hits
-      bumpers.forEach(b => {
-        const dist = Math.hypot(ball.x - b.x, ball.y - b.y);
-        if (dist < ball.r + b.r) {
-          const angle = Math.atan2(ball.y - b.y, ball.x - b.x);
-          const force = 14;
-          ball.vx = Math.cos(angle) * force;
-          ball.vy = Math.sin(angle) * force;
-          score += b.pts;
-          document.getElementById('score-val').textContent = score;
-          playSfx(850, 0.15);
+        ctx.fillStyle = ro.lit ? '#000' : '#05ffa1';
+        ctx.font = 'bold 16px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ro.label, ro.x + ro.width / 2, ro.y + 26);
+      }
 
-          // Sparks
-          for (let i=0; i<12; i++) {
-            particles.push({ x: b.x, y: b.y, vx:(Math.random()-0.5)*8, vy:(Math.random()-0.5)*8, color: b.color, life: 1 });
-          }
-        }
-      });
+      // Draw Drop Targets (H A C K)
+      for (const dt of dropTargets) {
+        if (!dt.hit) {
+          ctx.fillStyle = '#00f5ff';
+          ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 12;
+          ctx.fillRect(dt.x, dt.y, dt.width, dt.height);
+          ctx.shadowBlur = 0;
 
-      // Check Wall Slingshots
-      wallSlingshots.forEach(s => {
-        const dist = Math.hypot(ball.x - s.x, ball.y - s.y);
-        if (dist < ball.r + s.r) {
-          ball.vx = s.kickX;
-          ball.vy = s.kickY;
-          score += s.pts;
-          document.getElementById('score-val').textContent = score;
-          playSfx(950, 0.15);
-          for (let i=0; i<10; i++) {
-            particles.push({ x: s.x, y: s.y, vx:(Math.random()-0.5)*8, vy:(Math.random()-0.5)*8, color: s.color, life: 1 });
-          }
-        }
-      });
-
-      // Flipper Collisions
-      [leftFlipper, rightFlipper].forEach(f => {
-        const tipX = f.x + Math.cos(f.angle) * f.length;
-        const tipY = f.y + Math.sin(f.angle) * f.length;
-        
-        // Distance to line segment
-        const l2 = f.length * f.length;
-        const t = Math.max(0, Math.min(1, ((ball.x - f.x) * (tipX - f.x) + (ball.y - f.y) * (tipY - f.y)) / l2));
-        const projX = f.x + t * (tipX - f.x);
-        const projY = f.y + t * (tipY - f.y);
-        const dist = Math.hypot(ball.x - projX, ball.y - projY);
-
-        if (dist < ball.r + 12) {
-          const normalAngle = f.angle + (f.isLeft ? -Math.PI/2 : Math.PI/2);
-          const impulse = Math.abs(f.targetAngle - f.angle) > 0.05 ? 19 : 12;
-          ball.vx = Math.cos(normalAngle) * impulse + (Math.random() - 0.5) * 4;
-          ball.vy = -Math.abs(Math.sin(normalAngle) * impulse) - 5;
-          score += 100;
-          document.getElementById('score-val').textContent = score;
-          playSfx(650, 0.1);
-        }
-      });
-
-      // Ball Drain (Bottom)
-      if (ball.y > 820) {
-        balls--;
-        document.getElementById('balls-val').textContent = balls;
-        if (balls <= 0) {
-          gameOver();
-          return;
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(dt.label, dt.x + 5, dt.y + 17);
         } else {
-          resetBall();
+          ctx.strokeStyle = 'rgba(0, 245, 255, 0.3)';
+          ctx.strokeRect(dt.x, dt.y, dt.width, dt.height);
         }
       }
 
-      // Render
-      ctx.fillStyle = '#070914'; ctx.fillRect(0, 0, 600, 800);
-
-      // Arena Outer Border
-      ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 4;
-      ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 20;
-      ctx.strokeRect(30, 30, 540, 740);
+      // Draw Spinner
+      ctx.save();
+      ctx.translate(spinner.x, spinner.y);
+      ctx.rotate(spinner.angle);
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 12;
+      ctx.fillRect(-spinner.width / 2, -spinner.height / 2, spinner.width, spinner.height);
       ctx.shadowBlur = 0;
+      ctx.restore();
 
-      // Draw Wall Slingshots
-      wallSlingshots.forEach(s => {
-        ctx.fillStyle = s.color;
-        ctx.shadowColor = s.color; ctx.shadowBlur = 15;
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+      // Draw Pop Bumpers
+      for (const bmp of bumpers) {
+        if (bmp.flash > 0) bmp.flash--;
+        ctx.fillStyle = bmp.flash > 0 ? '#ffffff' : bmp.color;
+        ctx.shadowColor = bmp.color; ctx.shadowBlur = bmp.flash > 0 ? 30 : 18;
+        ctx.beginPath(); ctx.arc(bmp.x, bmp.y, bmp.r, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#070914';
+        ctx.beginPath(); ctx.arc(bmp.x, bmp.y, bmp.r * 0.6, 0, Math.PI * 2); ctx.fill();
+
         ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.4, 0, Math.PI*2); ctx.fill();
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(bmp.label, bmp.x, bmp.y + 4);
         ctx.shadowBlur = 0;
-      });
+      }
 
-      // Draw Bumpers
-      bumpers.forEach(b => {
-        ctx.fillStyle = b.color;
-        ctx.shadowColor = b.color; ctx.shadowBlur = 20;
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.35, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
-      });
-
-      // Draw Flippers
-      [leftFlipper, rightFlipper].forEach(f => {
-        ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 14; ctx.lineCap = 'round';
-        ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 15;
+      // Draw Slingshots
+      for (const s of slingshots) {
+        if (s.flash > 0) s.flash--;
+        ctx.fillStyle = s.flash > 0 ? '#fff' : 'rgba(5, 255, 161, 0.2)';
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = s.color; ctx.shadowBlur = s.flash > 0 ? 25 : 10;
         ctx.beginPath();
-        ctx.moveTo(f.x, f.y);
-        ctx.lineTo(f.x + Math.cos(f.angle) * f.length, f.y + Math.sin(f.angle) * f.length);
+        ctx.moveTo(s.p1.x, s.p1.y);
+        ctx.lineTo(s.p2.x, s.p2.y);
+        ctx.lineTo(s.p3.x, s.p3.y);
+        ctx.closePath();
+        ctx.fill();
         ctx.stroke();
         ctx.shadowBlur = 0;
-      });
+      }
+
+      // Draw Static Walls & Guide Rails
+      ctx.strokeStyle = '#00f5ff';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#00f5ff';
+      ctx.shadowBlur = 10;
+      for (const w of tableWalls) {
+        ctx.beginPath();
+        ctx.moveTo(w.x1, w.y1);
+        ctx.lineTo(w.x2, w.y2);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+
+      // Draw Flippers
+      drawFlipper(leftFlipper, '#00f5ff');
+      drawFlipper(rightFlipper, '#ff007f');
+
+      // Draw Plunger (Spring mechanism)
+      ctx.fillStyle = '#222';
+      ctx.fillRect(plunger.x - 10, plunger.y, plunger.width, plunger.height);
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 12;
+      ctx.fillRect(plunger.x - 10, plunger.y + plunger.pull, plunger.width, 16);
+      ctx.shadowBlur = 0;
+
+      // Draw Ball Save Laser Gate
+      if (ballSaveTimer > 0) {
+        ctx.strokeStyle = '#00f5ff';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.moveTo(215, 770);
+        ctx.lineTo(295, 770);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
 
       // Draw Particles
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        p.x += p.vx; p.y += p.vy; p.life -= 0.04;
+        p.x += p.vx; p.y += p.vy;
+        p.life -= p.decay;
         if (p.life <= 0) { particles.splice(i, 1); continue; }
-        ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
-        ctx.fillRect(p.x, p.y, 4, 4);
+
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
         ctx.globalAlpha = 1;
       }
 
-      // Draw Chrome Ball
-      ctx.fillStyle = '#fff';
-      ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 20;
-      ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+      // Draw Chrome Metallic Pinballs
+      for (const b of balls) {
+        // Drop Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath(); ctx.arc(b.x + 3, b.y + 4, b.r, 0, Math.PI * 2); ctx.fill();
+
+        // Chrome Shading
+        const grad = ctx.createRadialGradient(b.x - 3, b.y - 3, 1, b.x, b.y, b.r);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.4, '#d8e2ec');
+        grad.addColorStop(0.8, '#64748b');
+        grad.addColorStop(1, '#1e293b');
+
+        ctx.fillStyle = grad;
+        ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 15;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function drawFlipper(f, color) {
+      const tipX = f.pivotX + Math.cos(f.currentAngle) * f.length;
+      const tipY = f.pivotY + Math.sin(f.currentAngle) * f.length;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = color; ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.moveTo(f.pivotX, f.pivotY);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
       ctx.shadowBlur = 0;
 
+      // Base Pivot Cap
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(f.pivotX, f.pivotY, 6, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function renderDMD() {
+      // Dot Matrix Display Header
+      ctx.fillStyle = '#0a0f1d';
+      ctx.strokeStyle = 'rgba(0,245,255,0.4)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(30, 20, 480, 56);
+      ctx.fillRect(30, 20, 480, 56);
+
+      // Score
+      ctx.fillStyle = '#00f5ff';
+      ctx.font = '900 24px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(score.toLocaleString(), 46, 56);
+
+      // Multiplier & Balls
+      ctx.fillStyle = '#ff007f';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`BALLS: ${ballsRemaining} | ${multiplier}X`, 496, 42);
+
+      // Animated Marquee Message
+      if (dmdTimer > 0) dmdTimer--;
+      ctx.fillStyle = '#ffd700';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(dmdMessage, 496, 62);
+    }
+
+    /* ==========================================================================
+       7. MAIN GAME LOOP & STATE
+       ========================================================================== */
+    function loop() {
+      updatePhysics();
+      renderTable();
       requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    function startNewGame() {
+      score = 0;
+      ballsRemaining = 3;
+      multiplier = 1;
+      multiballCount = 0;
+      balls.length = 0;
+      particles.length = 0;
+      dropTargets.forEach(t => t.hit = false);
+      rollovers.forEach(r => r.lit = false);
+
+      document.getElementById('start-modal').style.display = 'none';
+      document.getElementById('gameover-modal').style.display = 'none';
+
+      isPlaying = true;
+      ballSaveTimer = 12;
+      setDMD("PULL PLUNGER TO LAUNCH! 🚀", 160);
+      spawnBall(true);
     }
 
     function gameOver() {
-      gameActive = false;
-      document.getElementById('modal-title').textContent = 'GAME OVER! 🎰';
-      document.getElementById('modal-sub').textContent = `FINAL SCORE: ${score.toLocaleString()}`;
-      document.getElementById('modal').style.display = 'flex';
+      isPlaying = false;
+      document.getElementById('final-score').textContent = score.toLocaleString();
+      document.getElementById('final-multiballs').textContent = multiballCount;
+      document.getElementById('gameover-modal').style.display = 'flex';
+
       try {
         if (window.ArcadeLeaderboard) {
           window.ArcadeLeaderboard.submitScore('cyber-pinball-fx', score);
