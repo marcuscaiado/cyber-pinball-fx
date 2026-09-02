@@ -720,10 +720,19 @@
               b.x = bmp.x + nx * (b.r + bmp.r + 1);
 
               bmp.flash = 12;
-              score += bmp.basePts * multiplier;
-              playAudioTone('bumper', 650 + Math.random() * 200, 0.12);
+              const pts = bmp.basePts * multiplier;
+              score += pts;
+              if (window.DopamineSynth) {
+                window.DopamineSynth.playCombo(multiplier);
+              } else {
+                playAudioTone('bumper', 650 + Math.random() * 200, 0.12);
+              }
+              if (window.DopamineJuice) {
+                const rect = canvas.getBoundingClientRect();
+                window.DopamineJuice.spawnScore(rect.left + (bmp.x / canvas.width) * rect.width, rect.top + (bmp.y / canvas.height) * rect.height, `+${pts} ⚡`, multiplier);
+              }
               spawnSparks(bmp.x, bmp.y, bmp.color, 16, 9);
-              setDMD(`BUMPER HIT +${bmp.basePts * multiplier}`, 45);
+              setDMD(`BUMPER HIT +${pts}`, 45);
             }
           }
 
@@ -734,8 +743,17 @@
               b.vx = s.kickX;
               b.vy = s.kickY;
               s.flash = 10;
-              score += 300 * multiplier;
-              playAudioTone('slingshot', 700, 0.08);
+              const pts = 300 * multiplier;
+              score += pts;
+              if (window.DopamineSynth) {
+                window.DopamineSynth.playThud(0.22);
+              } else {
+                playAudioTone('slingshot', 700, 0.08);
+              }
+              if (window.DopamineJuice) {
+                const rect = canvas.getBoundingClientRect();
+                window.DopamineJuice.spawnScore(rect.left + ((s.p1.x + s.p2.x) / 2 / canvas.width) * rect.width, rect.top + ((s.p1.y + s.p2.y) / 2 / canvas.height) * rect.height, `+${pts}`, 1);
+              }
               spawnSparks((s.p1.x + s.p2.x) / 2, (s.p1.y + s.p2.y) / 2, s.color, 14, 8);
             }
           }
@@ -751,13 +769,21 @@
                   b.y + b.r > dt.y && b.y - b.r < dt.y + dt.height) {
                 dt.hit = true;
                 b.vx = Math.abs(b.vx) * 0.8;
-                score += 1000 * multiplier;
-                playAudioTone('target', 800, 0.1);
+                const pts = 1000 * multiplier;
+                score += pts;
+                if (window.DopamineSynth) window.DopamineSynth.playScore(0.25);
+                else playAudioTone('target', 800, 0.1);
+                if (window.DopamineJuice) {
+                  const rect = canvas.getBoundingClientRect();
+                  window.DopamineJuice.spawnScore(rect.left + (dt.x / canvas.width) * rect.width, rect.top + (dt.y / canvas.height) * rect.height, `TARGET! +${pts} 🎯`, 3);
+                }
                 spawnSparks(dt.x + 5, dt.y + 13, '#00f5ff', 12, 6);
 
                 // Check if all 4 targets dropped
                 if (dropTargets.every(t => t.hit)) {
                   triggerMultiball();
+                  if (window.DopamineSynth) window.DopamineSynth.playWin();
+                  if (window.DopamineJuice) window.DopamineJuice.explodeConfetti(window.innerWidth / 2, window.innerHeight * 0.4, 60);
                   setTimeout(() => dropTargets.forEach(t => t.hit = false), 4000);
                 }
               }
@@ -1203,6 +1229,8 @@
 
     function gameOver() {
       isPlaying = false;
+      if (window.DopamineSynth) window.DopamineSynth.playWin();
+      if (window.DopamineJuice) window.DopamineJuice.explodeConfetti(window.innerWidth / 2, window.innerHeight * 0.4, 65);
       document.getElementById('final-score').textContent = score.toLocaleString();
       document.getElementById('final-multiballs').textContent = multiballCount;
       document.getElementById('gameover-modal').style.display = 'flex';
