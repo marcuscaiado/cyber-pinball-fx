@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <title>Cyber Pinball FX ⚡🎰 - Cyberpunk Arcade</title>
   <script src="arcade-sound-engine.js"></script>
+  <script src="arcade-difficulty.js"></script>
   <script src="arcade-leaderboard.js"></script>
   <style>
     :root {
@@ -710,7 +711,8 @@
           }
 
           // Apply Gravity & Velocity
-          b.vy += GRAVITY;
+          const ddaMult = window.ArcadeDifficulty ? ArcadeDifficulty.getMultiplier(score, 12000, 1.8) : 1.0;
+          b.vy += GRAVITY * Math.min(1.35, 0.95 + 0.1 * ddaMult);
           b.vx *= DRAG;
           b.vy *= DRAG;
           b.x += b.vx / SUB_STEPS;
@@ -737,7 +739,7 @@
               const nx = dx / dist;
               const ny = dy / dist;
               // Bounce with explosive bumper impulse
-              const kick = 15;
+              const kick = 15 * Math.min(1.25, 0.95 + 0.08 * ddaMult);
               b.vx = nx * kick;
               b.vy = ny * kick;
               b.x = bmp.x + nx * (b.r + bmp.r + 1);
@@ -1207,6 +1209,7 @@
     requestAnimationFrame(loop);
 
     function startNewGame() {
+      if (window.ArcadeDifficulty) ArcadeDifficulty.reset();
       score = 0;
       ballsRemaining = 3;
       multiplier = 1;
