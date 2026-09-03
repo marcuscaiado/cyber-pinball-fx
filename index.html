@@ -259,11 +259,20 @@
       padding: 2px 6px;
       border-radius: 4px;
     }
-  </style>
+  
+/* Universal Mobile Touch & Top Navigation Safeguards */
+.arcade-nav, .arcade-link, .nav-btn-arcade, .arcade-corner-btn, .arcade-btn, .btn-arcade, a[href*="arcad"], #modal a, #modal button, .modal a, .modal button, #game-over-modal a, #game-over-modal button {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: rgba(0, 245, 255, 0.4);
+}
+
+</style>
 </head>
 <body>
   <div id="game-wrapper">
-    <a href="https://marcuscaiado.github.io/marcus-arcade/" class="arcade-nav">🕹️ Arcade Hub</a>
+    <a href="https://marcuscaiado.github.io/marcus-arcade/" class="arcade-nav" target="_top" onclick="if(window.top){window.top.location.href=this.href;return false;}" ontouchend="if(window.top){window.top.location.href=this.href;return false;}">🕹️ Arcade Hub</a>
     <canvas id="table-canvas" width="540" height="800"></canvas>
 
     <!-- Touch & Button Overlays -->
@@ -292,7 +301,7 @@
         </div>
 
         <button class="btn" onclick="startNewGame()">INSERT COIN & PLAY 🚀</button>
-        <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn-secondary">🕹️ BACK TO ARCADE HUB</a>
+        <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn-secondary" target="_top" onclick="if(window.top){window.top.location.href=this.href;return false;}" ontouchend="if(window.top){window.top.location.href=this.href;return false;}">🕹️ BACK TO ARCADE HUB</a>
       </div>
     </div>
 
@@ -314,7 +323,7 @@
         </div>
 
         <button class="btn" onclick="startNewGame()">PLAY AGAIN 🔄</button>
-        <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn-secondary">🕹️ ARCADE HUB</a>
+        <a href="https://marcuscaiado.github.io/marcus-arcade/" class="btn-secondary" target="_top" onclick="if(window.top){window.top.location.href=this.href;return false;}" ontouchend="if(window.top){window.top.location.href=this.href;return false;}">🕹️ ARCADE HUB</a>
       </div>
     </div>
   </div>
